@@ -1,0 +1,3 @@
+[submodule "backend-challenge"]
+	path = backend-challenge
+	url = https://github.com/VigilTech/backend-challenge.git
