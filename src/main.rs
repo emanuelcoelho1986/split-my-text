@@ -1,67 +1,67 @@
 use std::env;
-use std::process::exit;
-use std::str::FromStr;
+use std::process::{ExitCode};
 
-fn main() {
+// Defaults
+static BREAK_AT: usize = 80;
+
+struct UserInputs {
+    break_at: usize,
+    text: String,
+}
+
+fn help() {
+    println!("WE need at least one argument");
+    println!("EG: splt-my-text \"SOME TEXT\" 50");
+    println!("\n\n\n");
+    print!("split-my-text THE_TEXT BREAK_AT");
+}
+
+fn main() -> ExitCode {
     // first arg is text, second one is limit
     let args: Vec<String> = env::args().collect();
 
-    let default_character_break_limit = 80;
-    let break_at: usize;
-    let text: &str;
-
-    if args.len() < 2 {
-        println!("\n\nYou must provide at least the text you need. eg: EXECUTABLE \"The text you need\"");
-        exit(1);
-    }
-
-    match args.get(1) {
-        None => {
-            println!("\n\nYou must provide at least the text you need. eg: EXECUTABLE \"The text you need\"");
-            exit(1)
+    let user_inputs = match build_user_inputs(args) {
+        Err(_) => {
+            help();
+            return ExitCode::FAILURE;
         },
-        Some(provided_text) => {
-            text = provided_text;
-        }
-    }
+        Ok(from_user_inputs) => from_user_inputs
+    };
 
-    match args.get(2) {
-        None => {
-            println!("\n\nNo break at limit set, fallback to default");
-            break_at = default_character_break_limit;
-        },
-        Some(break_at_option) => {
-            break_at = i32::from_str(break_at_option).unwrap() as usize;
-        }
-    }
-
-    let map_of_lines_of_text = map_words_to_limit(text, break_at);
-
-    print!("\n\n{} lines \n\n\n OUTPUT:\n", map_of_lines_of_text.len());
-
+    let map_of_lines_of_text = map_words_to_limit(&user_inputs.text, user_inputs.break_at.try_into().unwrap());
     for line in map_of_lines_of_text.iter() {
         println!("{}", line.join(" "))
     }
+
+    return ExitCode::SUCCESS;
 }
 
-fn map_words_to_limit(text: &str, break_at: usize) -> Vec<Vec<&str>> {
+fn build_user_inputs(arguments: Vec<String>) -> Result<UserInputs, &'static str> {
+    if arguments.len() < 2 {
+        return Err("We need some text");
+    }
+
+    Ok(UserInputs {
+        break_at: match arguments.get(2) {
+            None => BREAK_AT,
+            std::option::Option::Some(user_break_at) => usize::from_str_radix(&user_break_at, 10).unwrap(),
+        },
+        text: arguments.get(1).unwrap().to_string()
+    })
+}
+
+fn map_words_to_limit(text: &str, break_at: i32) -> Vec<Vec<&str>> {
     let text_splitted: Vec<&str> = text.split_whitespace().collect();
-    let text_size = text.len();
-
-    let number_of_lines: f32 = (text_size / break_at) as f32;
-
-    println!("\n\nNumber of predicted lines of text {}", number_of_lines);
 
     let mut map_of_lines = Vec::new();
     let mut words_per_line = Vec::new();
-
-    let mut characters_per_line = 0;
+    let mut characters_per_line: usize = 0;
 
     for word in text_splitted.into_iter() {
         // plus one because we need 1 for space
         characters_per_line += word.len() + 1;
 
-        if characters_per_line > break_at {
+        if characters_per_line > break_at.try_into().unwrap() {
             characters_per_line = word.len();
 
             map_of_lines.push(words_per_line);
