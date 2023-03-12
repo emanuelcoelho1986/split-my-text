@@ -1,53 +1,31 @@
-use std::env;
 use std::process::{ExitCode};
 
-// Defaults
-static BREAK_AT: usize = 80;
+use clap::Parser;
 
-struct UserInputs {
-    break_at: usize,
-    text: String,
-}
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+   /// Number of characters per line
+   #[arg(short, long, default_value_t = 80)]
+   break_words_at: usize,
 
-fn help() {
-    println!("WE need at least one argument");
-    println!("EG: splt-my-text \"SOME TEXT\" 50");
-    println!("\n\n\n");
-    print!("split-my-text THE_TEXT BREAK_AT");
+   /// Name of the person to greet
+   #[arg(short, long)]
+   text: String,
 }
 
 fn main() -> ExitCode {
-    // first arg is text, second one is limit
-    let args: Vec<String> = env::args().collect();
+    // Using "clap" to deal wih arguments => https://docs.rs/clap/latest/clap/
+    let args = Args::parse();
 
-    let user_inputs = match build_user_inputs(args) {
-        Err(_) => {
-            help();
-            return ExitCode::FAILURE;
-        },
-        Ok(from_user_inputs) => from_user_inputs
-    };
+    println!("\n\n/****** Split My Text ******/ \n\n");
 
-    let map_of_lines_of_text = map_words_to_limit(&user_inputs.text, user_inputs.break_at.try_into().unwrap());
+    let map_of_lines_of_text = map_words_to_limit(&args.text, args.break_words_at.try_into().unwrap());
     for line in map_of_lines_of_text.iter() {
         println!("{}", line.join(" "))
     }
 
     return ExitCode::SUCCESS;
-}
-
-fn build_user_inputs(arguments: Vec<String>) -> Result<UserInputs, &'static str> {
-    if arguments.len() < 2 {
-        return Err("We need some text");
-    }
-
-    Ok(UserInputs {
-        break_at: match arguments.get(2) {
-            None => BREAK_AT,
-            std::option::Option::Some(user_break_at) => usize::from_str_radix(&user_break_at, 10).unwrap(),
-        },
-        text: arguments.get(1).unwrap().to_string()
-    })
 }
 
 fn map_words_to_limit(text: &str, break_at: i32) -> Vec<Vec<&str>> {
